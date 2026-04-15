@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+    <title>蓝牙串口</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#f2f2f7">
+
+    <meta name="apple-mobile-web-app-title" content="蓝牙串口">
+    <style>
+        /* 移动端清爽明亮主题 */
+        :root {
+            --primary: #007aff; /* 科技蓝 */
+            --primary-active: #005bb5;
+            --success: #34c759;
+            --danger: #ff3b30;
+            --bg-color: #f2f2f7; /* 浅灰背景 */
+            --card-bg: #ffffff;
+            --text-main: #000000;
+            --text-muted: #8e8e93;
+            --border-color: #c6c6c8;
+        }
+
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Arial, sans-serif; 
+            background-color: var(--bg-color); 
+            color: var(--text-main);
+            margin: 0;
+            padding: 12px;
+            /* 防止iOS回弹发白 */
+            overscroll-behavior-y: none;
+        }
+
+        .container { 
+            background-color: var(--card-bg); 
+            width: 100%;
+            box-sizing: border-box;
+            padding: 16px; 
+            border-radius: 16px; 
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04); 
+            margin-bottom: 20px;
+        }
+
+        /* 标题与状态 */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 0.5px solid var(--border-color);
+        }
+
+        h2 { margin: 0; font-size: 20px; font-weight: 600; color: #1c1c1e; }
+
+        .status-pill {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 500;
+            background-color: #ffeaea;
+            color: var(--danger);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .status-pill::before {
+            content: '';
+            display: block;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background-color: var(--danger);
+        }
+
+        .status-pill.connected { background-color: #e4f8e9; color: #248a3d; }
+        .status-pill.connected::before { background-color: var(--success); }
+
+        /* 配置区 (手机端堆叠显示) */
+        .config-panel { 
+            background: #fbfbfd; 
+            border: 0.5px solid var(--border-color); 
+            padding: 12px; 
+            border-radius: 10px; 
+            margin-bottom: 16px; 
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .input-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .input-row label { font-size: 14px; color: var(--text-muted); }
+        .input-row input { 
+            padding: 6px 10px; 
+            border: 0.5px solid var(--border-color); 
+            border-radius: 6px; 
+            font-family: monospace;
+            font-size: 16px; /* iOS大于16px不自动放大 */
+            width: 60px;
+            text-align: center;
+        }
+
+        /* 文本区域 */
+        .section-header { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            margin-bottom: 8px; 
+            margin-top: 16px;
+        }
+        .section-header span { font-size: 14px; font-weight: 600; color: #3a3a3c; }
+        
+        textarea { 
+            width: 100%; 
+            box-sizing: border-box; 
+            padding: 12px; 
+            border: 0.5px solid var(--border-color); 
+            border-radius: 10px; 
+            font-size: 15px;
+            line-height: 1.5;
+            resize: none; /* 手机端禁用手动拖拽大小 */
+            background-color: #ffffff;
+            color: #000000;
+            font-family: SFMono-Regular, Consolas, monospace;
+            -webkit-appearance: none;
+        }
+        
+        textarea:focus { outline: none; border-color: var(--primary); }
+
+        /* 手机端专属滚动条优化 */
+        #receiveArea {
+            height: 250px; /* 手机端固定高度 */
+            -webkit-overflow-scrolling: touch; /* 顺滑滚动 */
+        }
+
+        /* 按钮与控制栏 */
+        .controls-row { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            margin-top: 16px; 
+        }
+        
+        button { 
+            padding: 12px; 
+            background-color: var(--primary); 
+            color: white; 
+            border: none; 
+            border-radius: 10px; 
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer; 
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 6px;
+            -webkit-tap-highlight-color: transparent; /* 去除安卓点击灰影 */
+        }
+        button:active:not(:disabled) { background-color: var(--primary-active); }
+        button:disabled { background-color: #d1d1d6; color: #8e8e93; }
+        
+        .btn-full { width: 100%; margin-top: 10px; font-weight: 600; }
+        .btn-text { background: transparent; color: var(--primary); padding: 4px 8px; font-size: 13px; border-radius: 4px; }
+        .btn-text:active { background: #e5e5ea; }
+
+        /* iOS 风格分段选择器 */
+        .segmented-control { 
+            display: flex; 
+            background: #eeeeef; 
+            padding: 2px; 
+            border-radius: 8px; 
+            width: 120px;
+        }
+        .segmented-control label { 
+            flex: 1;
+            text-align: center;
+            padding: 6px 0; 
+            font-size: 13px; 
+            font-weight: 500;
+            color: #000;
+            border-radius: 6px;
+        }
+        .segmented-control input[type="radio"] { display: none; }
+        .segmented-control input[type="radio"]:checked + label { 
+            background: white; 
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1); 
+        }
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h2>蓝牙串口</h2>
+            <div id="statusBadge" class="status-pill">未连接</div>
+        </div>
+
+        <div class="config-panel">
+            <div class="input-row">
+                <label>主服务 (Service UUID):</label>
+                <input type="text" id="serviceUuid" value="FFE0">
+            </div>
+            <div class="input-row">
+                <label>特征值 (Char UUID):</label>
+                <input type="text" id="charUuid" value="FFE1">
+            </div>
+            <button id="connectBtn" class="btn-full" onclick="toggleConnection()">搜索设备</button>
+        </div>
+
+        <div class="section-header">
+            <span>接收数据 (RX)</span>
+            <button class="btn-text" onclick="clearReceive()">清空</button>
+        </div>
+        <textarea id="receiveArea" readonly placeholder="等待蓝牙设备连接并发送数据..."></textarea>
+
+        <div class="section-header">
+            <span>发送数据 (TX)</span>
+            <button class="btn-text" onclick="clearSend()">清空</button>
+        </div>
+        <textarea id="sendArea" rows="2" placeholder="输入要发送的数据"></textarea>
+
+        <div class="controls-row">
+            <div class="segmented-control">
+                <input type="radio" id="fmtAscii" name="format" value="ASCII" checked>
+                <label for="fmtAscii">ASCII</label>
+                <input type="radio" id="fmtHex" name="format" value="HEX">
+                <label for="fmtHex">HEX</label>
+            </div>
+            <button id="sendBtn" style="width: 120px;" onclick="sendData()" disabled>发送</button>
+        </div>
+    </div>
+
+    <script>
+        let bluetoothDevice;
+        let rxCharacteristic;
+        let txCharacteristic;
+
+        // UUID转换器
+        function getUuid(val) {
+            val = val.trim().toLowerCase();
+            if (val.length === 4) return parseInt(val, 16);
+            return val;
+        }
+
+        async function toggleConnection() {
+            if (bluetoothDevice && bluetoothDevice.gatt.connected) {
+                await disconnectBluetooth();
+            } else {
+                await connectBluetooth();
+            }
+        }
+
+        async function connectBluetooth() {
+            const serviceUuid = getUuid(document.getElementById('serviceUuid').value);
+            const charUuid = getUuid(document.getElementById('charUuid').value);
+
+            try {
+                // 同样保留了不限制设备搜索的代码，保证 HC-04 能秒出
+                bluetoothDevice = await navigator.bluetooth.requestDevice({
+                    acceptAllDevices: true,
+                    optionalServices: [serviceUuid]
+                });
+
+                bluetoothDevice.addEventListener('gattserverdisconnected', onDisconnected);
+                const server = await bluetoothDevice.gatt.connect();
+                const service = await server.getPrimaryService(serviceUuid);
+                
+                rxCharacteristic = await service.getCharacteristic(charUuid);
+                txCharacteristic = rxCharacteristic; 
+
+                await rxCharacteristic.startNotifications();
+                rxCharacteristic.addEventListener('characteristicvaluechanged', handleReceive);
+
+                // 更新UI状态
+                const statusBadge = document.getElementById('statusBadge');
+                statusBadge.textContent = '已连接';
+                statusBadge.classList.add('connected');
+                
+                const connectBtn = document.getElementById('connectBtn');
+                connectBtn.textContent = '断开连接';
+                connectBtn.style.backgroundColor = 'var(--danger)';
+                connectBtn.style.color = '#fff';
+                
+                document.getElementById('sendBtn').disabled = false;
+                document.getElementById('serviceUuid').disabled = true;
+                document.getElementById('charUuid').disabled = true;
+
+                appendLog('系统', '蓝牙已连接准备就绪');
+            } catch (error) {
+                if (error.name !== 'NotFoundError') { // 忽略用户主动取消的选择
+                    alert('连接失败: ' + error.message);
+                }
+            }
+        }
+
+        function onDisconnected() {
+            appendLog('系统', '设备已断开连接');
+            updateUIOnDisconnect();
+        }
+
+        async function disconnectBluetooth() {
+            if (bluetoothDevice && bluetoothDevice.gatt.connected) {
+                await rxCharacteristic.stopNotifications();
+                bluetoothDevice.gatt.disconnect();
+            }
+        }
+
+        function updateUIOnDisconnect() {
+            const statusBadge = document.getElementById('statusBadge');
+            statusBadge.textContent = '未连接';
+            statusBadge.classList.remove('connected');
+            
+            const connectBtn = document.getElementById('connectBtn');
+            connectBtn.textContent = '搜索设备';
+            connectBtn.style.backgroundColor = 'var(--primary)';
+            
+            document.getElementById('sendBtn').disabled = true;
+            document.getElementById('serviceUuid').disabled = false;
+            document.getElementById('charUuid').disabled = false;
+        }
+
+        function handleReceive(event) {
+            const value = event.target.value;
+            const uint8Array = new Uint8Array(value.buffer);
+            const format = document.querySelector('input[name="format"]:checked').value;
+            let displayStr = '';
+
+            if (format === 'ASCII') {
+                displayStr = new TextDecoder('utf-8').decode(uint8Array);
+            } else {
+                displayStr = Array.from(uint8Array).map(b => b.toString(16).padStart(2, '0').toUpperCase()).join(' ') + ' ';
+            }
+            appendLog('接收', displayStr);
+        }
+
+        async function sendData() {
+            if (!txCharacteristic) return;
+
+            const sendArea = document.getElementById('sendArea');
+            const format = document.querySelector('input[name="format"]:checked').value;
+            let data = sendArea.value;
+
+            if (!data.trim()) return;
+
+            let uint8Array;
+            if (format === 'ASCII') {
+                uint8Array = new TextEncoder().encode(data);
+            } else {
+                const hexStr = data.replace(/\s+/g, '');
+                if (/[^0-9a-fA-F]/.test(hexStr)) return alert('请检查：包含非HEX字符');
+                if (hexStr.length % 2 !== 0) return alert('请检查：HEX长度必须为偶数');
+                
+                uint8Array = new Uint8Array(hexStr.length / 2);
+                for (let i = 0; i < hexStr.length; i += 2) {
+                    uint8Array[i / 2] = parseInt(hexStr.substring(i, i + 2), 16);
+                }
+            }
+
+            try {
+                await txCharacteristic.writeValue(uint8Array);
+                appendLog('发送', data);
+            } catch (error) {
+                alert('发送失败: ' + error.message);
+            }
+        }
+
+        function appendLog(type, content) {
+            const receiveArea = document.getElementById('receiveArea');
+            // 获取当前时间 HH:MM:SS
+            const now = new Date();
+            const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
+            
+            // 构建日志格式，白底黑字下直接用简明前缀
+            let logLine = `[${timeStr}] ${type}: ${content}`;
+            
+            receiveArea.value += (receiveArea.value ? '\n' : '') + logLine;
+            // 滚动到底部
+            receiveArea.scrollTop = receiveArea.scrollHeight;
+        }
+
+        function clearReceive() { document.getElementById('receiveArea').value = ''; }
+        function clearSend() { document.getElementById('sendArea').value = ''; }
+    </script>
+</body>
+</html>
