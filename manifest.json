@@ -1,0 +1,17 @@
+{
+  "name": "蓝牙串口调试助手",
+  "short_name": "蓝牙串口",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f2f2f7",
+  "theme_color": "#f2f2f7",
+  "description": "一个用于连接底层硬件的Web蓝牙调试终端",
+  "icons": [
+    {
+      "src": "./icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
